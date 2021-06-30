@@ -29,6 +29,7 @@ def is_hit(obj1, obj2, o_width, o_height):
     hit_x = dist_x < 1+o_width/2
     return hit_y and hit_x
 
+
 def is_hit_sand(water, obj):
     return is_hit(water, obj, 200, 100)
 
@@ -78,24 +79,37 @@ def draw_fruit(fruit_pos):
 
 def draw_text():
     textSize(32)
-    text("Frutas comidas em " + str(steps) + " steps: "  + str(points), 10, 30)
+    text("Frutas comidas em " + str(steps) + " steps: " + str(points), 10, 30)
     fill(0, 102, 153)
 
 
 def setup():
-    global v, points, obstacles, sands, water, fruit, steps
+    global v, points, obstacles, sands, water, fruit, steps, mapa
     size(640, 360)
     v = Vehicle(0, 0)
     points = 0
     steps = 0
     sands = [PVector(100, height-50), PVector(width/2, 50)]
     water = PVector(width-100, height-100)
-    obs_pos = [PVector(120, 100), PVector(width/2, height/2), PVector(320+200, 200)]
+    obs_pos = [PVector(120, 100), PVector(
+        width/2, height/2), PVector(320+200, 200)]
     obs_params = [(20, 120), (80, 80), (160, 20)]
     obstacles = zip(obs_pos, obs_params)
     fruit = random_pos()
     while is_hit_obstacles(obstacles, fruit):
         fruit = random_pos()
+    mapa = [[1]*640]*360
+    for y in range(height):
+        for x in range(width):
+            pos = PVector(x, y)
+            for sand in sands:
+                if is_hit_sand(sand, pos):
+                    mapa[y][x] = 5
+            if is_hit_obstacles(obstacles, pos):
+                mapa[y][x] = 10000000
+            if is_hit_water(water, pos):
+                mapa[y][x] = 10
+    mapa[int(fruit.y)][int(fruit.x)] = -1000
 
 
 def draw():
