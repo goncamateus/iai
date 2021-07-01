@@ -90,6 +90,14 @@ def draw_visited():
         strokeWeight(1)
         ellipse(12.5+x*25, 12.5+y*25, 20, 20)
 
+def draw_frontier():
+    for _, (x, y) in le_frontier.elements:
+        m_color = (255, 252, 167)
+        fill(*m_color)
+        stroke(127)
+        strokeWeight(1)
+        ellipse(12.5+x*25, 12.5+y*25, 20, 20)
+
 
 def set_map():
     global mapa, ori_mapa
@@ -188,7 +196,7 @@ def heuristic(goal, next):
 
 
 def a_star():
-    global res, visited, ori_res
+    global res, visited, ori_res, le_frontier
     start = get_vehicle_tile(v.position)
     frontier = PriorityQueue()
     frontier.put(start, 0)
@@ -219,6 +227,7 @@ def a_star():
         res.append(last)
     res.reverse()
     ori_res = deepcopy(res)
+    le_frontier = frontier
 
 
 def setup():
@@ -266,6 +275,7 @@ def draw():
         v.position.add(v.desired)
 
     draw_tiles()
+    draw_frontier()
     draw_visited()
     draw_res()
     v.display()
