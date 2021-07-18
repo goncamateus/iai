@@ -4,7 +4,7 @@
 # educational purposes provided that (1) you do not distribute or publish
 # solutions, (2) you retain this notice, and (3) you provide clear
 # attribution to UC Berkeley, including a link to http://ai.berkeley.edu.
-# 
+#
 # Attribution Information: The Pacman AI projects were developed at UC Berkeley.
 # The core projects and autograders were primarily created by John DeNero
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
@@ -15,7 +15,8 @@
 import random
 
 import util
-from game import Agent, Directions
+from game import Agent, AgentState, Directions, GameStateData
+from pacman import GameState
 from util import manhattanDistance
 
 
@@ -29,7 +30,6 @@ class ReflexAgent(Agent):
       headers.
     """
 
-
     def getAction(self, gameState):
         """
         You do not need to change this method, but you're welcome to.
@@ -41,18 +41,22 @@ class ReflexAgent(Agent):
         """
         # Collect legal moves and successor states
         legalMoves = gameState.getLegalActions()
+        if 'Stop' in legalMoves:
+            legalMoves.remove('Stop')
 
         # Choose one of the best actions
-        scores = [self.evaluationFunction(gameState, action) for action in legalMoves]
+        scores = [self.evaluationFunction(
+            gameState, action) for action in legalMoves]
         bestScore = max(scores)
-        bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
-        chosenIndex = random.choice(bestIndices) # Pick randomly among the best
-
+        bestIndices = [index for index in range(
+            len(scores)) if scores[index] == bestScore]
+        # Pick randomly among the best
+        chosenIndex = random.choice(bestIndices)
         "Add more of your code here if you want to"
 
         return legalMoves[chosenIndex]
 
-    def evaluationFunction(self, currentGameState, action):
+    def evaluationFunction(self, currentGameState: GameState, action):
         """
         Design a better evaluation function here.
 
@@ -69,13 +73,95 @@ class ReflexAgent(Agent):
         """
         # Useful information you can extract from a GameState (pacman.py)
         successorGameState = currentGameState.generatePacmanSuccessor(action)
-        newPos = successorGameState.getPacmanPosition()
-        newFood = successorGameState.getFood()
-        newGhostStates = successorGameState.getGhostStates()
-        newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
-        "*** YOUR CODE HERE ***"
-        return successorGameState.getScore()
+        ghost_score = self.get_ghost_score(currentGameState)
+        future_ghost_score = self.get_ghost_score(successorGameState)
+
+        best_food = self.get_best_food(currentGameState)
+
+        my_pos = currentGameState.getPacmanPosition()
+        my_future_pos = successorGameState.getPacmanPosition()
+
+        score = 0
+
+        score += future_ghost_score
+
+        if util.manhattanDistance(my_pos, best_food) < util.manhattanDistance(my_future_pos, best_food):
+            score -= 10
+        else:
+            score += 10
+
+        return score
+
+    def get_ghost_score(self, gameState: GameState):
+        score = 0
+        closest_capsule = self.get_closest_capsule(gameState)
+        closest_ghost = self.get_closest_ghost(gameState)
+        my_pos = gameState.getPacmanPosition()
+        dist_ghost = util.manhattanDistance(
+            my_pos, closest_ghost.getPosition())
+        scared_timer = closest_ghost.scaredTimer
+        if dist_ghost + scared_timer < 3:
+            if closest_capsule:
+                dist_capsule = util.manhattanDistance(
+                    my_pos, closest_capsule)
+                if dist_capsule < 2:
+                    score += 10
+                else:
+                    score = -100
+            else:
+                score = -100
+        elif closest_capsule:
+            dist_capsule = util.manhattanDistance(my_pos, closest_capsule)
+            if dist_capsule < 2:
+                score += 10
+        return score
+
+    def get_best_foods_from_ghost(self, gameState: GameState, ghost: AgentState):
+        food_positions = gameState.getFood().asList()
+        ghost_distances = [manhattanDistance(ghost.getPosition(), food)
+                           for food in food_positions]
+        my_pos = gameState.getPacmanPosition()
+        my_distances = [manhattanDistance(my_pos, food)
+                        for food in food_positions]
+        best_pos = None
+        best_dist = 1000
+        for i, food_pos in enumerate(food_positions):
+            if best_dist == 1000:
+                best_pos = food_pos
+                best_dist = my_distances[i]
+            elif my_distances[i] < ghost_distances[i] + ghost.scaredTimer:
+                if best_dist > my_distances[i]:
+                    best_pos = food_pos
+                    best_dist = my_distances[i]
+
+        return best_pos
+
+    def get_best_food(self, gameState: GameState) -> tuple:
+        ghosts = gameState.getGhostStates()
+        my_pos = gameState.getPacmanPosition()
+        best_foods = [self.get_best_foods_from_ghost(gameState, ghost)
+                      for ghost in ghosts]
+        closest_bests = min(best_foods, key=lambda x: util.manhattanDistance(
+            my_pos, x))
+        return closest_bests
+
+    def get_closest_capsule(self, gameState: GameState):
+        capsule_positions = gameState.getCapsules()
+        my_pos = gameState.getPacmanPosition()
+        distances = [manhattanDistance(my_pos, capsule)
+                     for capsule in capsule_positions]
+        if capsule_positions:
+            return capsule_positions[distances.index(min(distances))]
+        return None
+
+    def get_closest_ghost(self, gameState: GameState) -> AgentState:
+        ghost_states = gameState.getGhostStates()
+        my_pos = gameState.getPacmanPosition()
+        distances = [manhattanDistance(
+            my_pos, ghost.getPosition()) for ghost in ghost_states]
+        return ghost_states[distances.index(min(distances))]
+
 
 def scoreEvaluationFunction(currentGameState):
     """
@@ -86,6 +172,7 @@ def scoreEvaluationFunction(currentGameState):
       (not reflex agents).
     """
     return currentGameState.getScore()
+
 
 class MultiAgentSearchAgent(Agent):
     """
@@ -102,10 +189,11 @@ class MultiAgentSearchAgent(Agent):
       is another abstract class.
     """
 
-    def __init__(self, evalFn = 'scoreEvaluationFunction', depth = '2'):
-        self.index = 0 # Pacman is always agent index 0
+    def __init__(self, evalFn='scoreEvaluationFunction', depth='2'):
+        self.index = 0  # Pacman is always agent index 0
         self.evaluationFunction = util.lookup(evalFn, globals())
         self.depth = int(depth)
+
 
 class MinimaxAgent(MultiAgentSearchAgent):
     """
@@ -132,6 +220,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
         "*** YOUR CODE HERE ***"
         util.raiseNotDefined()
 
+
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
       Your minimax agent with alpha-beta pruning (question 3)
@@ -143,6 +232,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
         "*** YOUR CODE HERE ***"
         util.raiseNotDefined()
+
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
@@ -159,6 +249,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         "*** YOUR CODE HERE ***"
         util.raiseNotDefined()
 
+
 def betterEvaluationFunction(currentGameState):
     """
       Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
@@ -169,6 +260,6 @@ def betterEvaluationFunction(currentGameState):
     "*** YOUR CODE HERE ***"
     util.raiseNotDefined()
 
+
 # Abbreviation
 better = betterEvaluationFunction
-
