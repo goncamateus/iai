@@ -176,7 +176,7 @@ class GradingAgent(Agent):
         altDepthActions = self.altDepthActions[self.stepCount]
         partialPlyBugActions = self.partialPlyBugActions[self.stepCount]
         studentOptimalAction = False
-        curRightStatesExplored = False;
+        curRightStatesExplored = False
         for i in range(len(optimalActions)):
             if studentAction[0] in optimalActions[i][0]:
                 studentOptimalAction = True
@@ -305,9 +305,9 @@ class PacmanGameTreeTest(testClasses.TestCase):
         # load student code and staff code solutions
         multiAgents = moduleDict['multiAgents']
         studentAgent = getattr(multiAgents, self.alg)(depth=self.depth)
-        allActions = map(lambda x: json.loads(x), solutionDict['optimalActions'].split('\n'))
-        altDepthActions = map(lambda x: json.loads(x), solutionDict['altDepthActions'].split('\n'))
-        partialPlyBugActions = map(lambda x: json.loads(x), solutionDict['partialPlyBugActions'].split('\n'))
+        allActions = [json.loads(x) for x in solutionDict['optimalActions'].split('\n')]
+        altDepthActions = [json.loads(x) for x in solutionDict['altDepthActions'].split('\n')]
+        partialPlyBugActions = [json.loads(x) for x in solutionDict['partialPlyBugActions'].split('\n')]
         # set up game state and play a game
         random.seed(self.seed)
         lay = layout.Layout([l.strip() for l in self.layout_text.split('\n')])

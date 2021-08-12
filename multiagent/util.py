@@ -291,8 +291,8 @@ class Counter(dict):
         """
         if len(self.keys()) == 0:
             return None
-        all = self.items()
-        values = [x[1] for x in all]
+        all = list(self.items())
+        values = list(self.values())
         maxIndex = values.index(max(values))
         return all[maxIndex][0]
 
